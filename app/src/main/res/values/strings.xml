@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">GPKG Viewer</string>
+    <string name="action_layers">Layers</string>
+    <string name="action_addVectorGpkg">Add Vector GPKG</string>
+    <string name="action_addRasterGpkg">Add Raster GPKG</string>
+    <string name="layers_dialog_title">Layers</string>
+    <string name="zoom_to">Zoom To</string>
+    <string name="spatial_reference_not_set">Spatial reference undefined</string>
+    <string name="shapefile_name">continent</string>
+</resources>
