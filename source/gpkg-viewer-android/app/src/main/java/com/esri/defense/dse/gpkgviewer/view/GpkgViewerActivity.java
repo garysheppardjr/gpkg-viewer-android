@@ -15,14 +15,15 @@
  ******************************************************************************/
 package com.esri.defense.dse.gpkgviewer.view;
 
+import android.content.Intent;
 import android.content.res.AssetManager;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.widget.TextView;
 
 import com.esri.android.map.FeatureLayer;
 import com.esri.android.map.GroupLayer;
@@ -34,24 +35,24 @@ import com.esri.core.geodatabase.GeopackageFeatureTable;
 import com.esri.core.geodatabase.ShapefileFeatureTable;
 import com.esri.core.geometry.Geometry;
 import com.esri.core.map.CallbackListener;
-import com.esri.core.map.Feature;
 import com.esri.core.map.FeatureResult;
 import com.esri.core.renderer.SimpleRenderer;
 import com.esri.core.symbol.SimpleFillSymbol;
 import com.esri.core.tasks.query.QueryParameters;
 import com.esri.defense.dse.gpkgviewer.R;
 import com.esri.defense.dse.gpkgviewer.util.Utilities;
+import com.ipaulpro.afilechooser.utils.FileUtils;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-
+/**
+ * Main activity for the app that opens Geopackages.
+ */
 public class GpkgViewerActivity extends ActionBarActivity implements MapActivity {
 
     private static final String TAG = GpkgViewerActivity.class.getSimpleName();
@@ -63,6 +64,8 @@ public class GpkgViewerActivity extends ActionBarActivity implements MapActivity
             Color.rgb(255, 0, 255),
             Color.rgb(0, 255, 255),
     };
+    private static final int REQUEST_CODE_RASTER = 1;
+    private static final int REQUEST_CODE_VECTOR = 2;
 
     private GroupLayer exampleLayer = null;
 //    private GroupLayer geopackageTestLayer = null;
@@ -143,12 +146,46 @@ public class GpkgViewerActivity extends ActionBarActivity implements MapActivity
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
 
-        if (id == R.id.action_layers) {
-            new LayersDialogFragment().show(getFragmentManager(), "LayersDialogFragment");
-            return true;
-        } else {
-            return super.onOptionsItemSelected(item);
+        switch (id) {
+            case R.id.action_layers:
+                new LayersDialogFragment().show(getFragmentManager(), "LayersDialogFragment");
+                return true;
+
+            case R.id.action_addRasterGpkg:
+            case R.id.action_addVectorGpkg:
+                Intent intent = Intent.createChooser(FileUtils.createGetContentIntent(), "Select a Geopackage (.gpkg)");
+                startActivityForResult(intent, R.id.action_addRasterGpkg == id ? REQUEST_CODE_RASTER : REQUEST_CODE_VECTOR);
+                return true;
+
+            default:
+                return super.onOptionsItemSelected(item);
         }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        switch (requestCode) {
+            case REQUEST_CODE_RASTER:
+            case REQUEST_CODE_VECTOR:
+                if (RESULT_OK == resultCode) {
+                    Uri uri = data.getData();
+                    String path = FileUtils.getPath(this, uri);
+
+                    if (REQUEST_CODE_RASTER == requestCode) {
+                        addRasterGpkg(path);
+                    } else {
+                        addVectorGpkg(path);
+                    }
+                }
+        }
+    }
+
+    private void addRasterGpkg(String path) {
+
+    }
+
+    private void addVectorGpkg(String path) {
+
     }
 
     public MapView getMapView() {
