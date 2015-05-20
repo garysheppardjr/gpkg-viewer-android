@@ -32,7 +32,7 @@ Navigate to a .gpkg file, and the app will add the first raster in the Geopackag
 
 Find a bug or want to request a new feature?  Please let us know by submitting an issue.
 
-See [Issues](issues) for a list of known issues.
+See [Issues](https://github.com/garys-esri/gpkg-viewer-android/issues) for a list of known issues.
 
 ## Contributing
 
