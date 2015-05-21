@@ -17,6 +17,9 @@ package com.esri.defense.dse.gpkgviewer.view;
 
 import com.esri.android.map.MapView;
 
+/**
+ * Interface for an Activity that displays a map.
+ */
 public interface MapActivity {
 
     public MapView getMapView();

@@ -24,21 +24,27 @@ import android.support.v7.app.ActionBarActivity;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.TextView;
 
 import com.esri.android.map.FeatureLayer;
 import com.esri.android.map.GroupLayer;
+import com.esri.android.map.Layer;
 import com.esri.android.map.MapView;
+import com.esri.android.map.RasterLayer;
 import com.esri.android.map.event.OnStatusChangedListener;
 import com.esri.android.runtime.ArcGISRuntime;
 import com.esri.core.geodatabase.Geopackage;
 import com.esri.core.geodatabase.GeopackageFeatureTable;
 import com.esri.core.geodatabase.ShapefileFeatureTable;
 import com.esri.core.geometry.Geometry;
-import com.esri.core.map.CallbackListener;
-import com.esri.core.map.FeatureResult;
+import com.esri.core.raster.FileRasterSource;
+import com.esri.core.raster.RasterSource;
+import com.esri.core.renderer.RGBRenderer;
+import com.esri.core.renderer.Renderer;
 import com.esri.core.renderer.SimpleRenderer;
 import com.esri.core.symbol.SimpleFillSymbol;
-import com.esri.core.tasks.query.QueryParameters;
+import com.esri.core.symbol.SimpleLineSymbol;
+import com.esri.core.symbol.SimpleMarkerSymbol;
 import com.esri.defense.dse.gpkgviewer.R;
 import com.esri.defense.dse.gpkgviewer.util.Utilities;
 import com.ipaulpro.afilechooser.utils.FileUtils;
@@ -47,6 +53,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -66,17 +73,22 @@ public class GpkgViewerActivity extends ActionBarActivity implements MapActivity
     };
     private static final int REQUEST_CODE_RASTER = 1;
     private static final int REQUEST_CODE_VECTOR = 2;
+    private static final RGBRenderer RGB_RENDERER = new RGBRenderer();
+    private static final SimpleRenderer FILL_RENDERER = new SimpleRenderer(new SimpleFillSymbol(Color.RED));
+    private static final SimpleRenderer LINE_RENDERER = new SimpleRenderer(new SimpleLineSymbol(Color.CYAN, 5f));
+    private static final SimpleRenderer POINT_RENDERER = new SimpleRenderer(new SimpleMarkerSymbol(Color.BLUE, 10, SimpleMarkerSymbol.STYLE.CIRCLE));
 
     private GroupLayer exampleLayer = null;
-//    private GroupLayer geopackageTestLayer = null;
-//    private ArcGISTiledMapServiceLayer basemapLayer = null;
+    private ShapefileFeatureTable shpTable = null;
+    private HashSet<RasterSource> rasterSources = new HashSet<>();
+    private HashSet<Geopackage> geopackages = new HashSet<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_gpkg_viewer);
 
-        MapView map = getMapView();
+        final MapView map = getMapView();
 
         ArcGISRuntime.setClientId("Hu5bsEz4UDdDnsFp");
 
@@ -90,7 +102,8 @@ public class GpkgViewerActivity extends ActionBarActivity implements MapActivity
                 }
             }
 
-            ShapefileFeatureTable shpTable = new ShapefileFeatureTable(new File(getFilesDir(), shapefileName + ".shp").getAbsolutePath());
+            File shapefile = new File(getFilesDir(), shapefileName + ".shp");
+            shpTable = new ShapefileFeatureTable(shapefile.getAbsolutePath());
             FeatureLayer shpLayer = new FeatureLayer(shpTable);
             shpLayer.setRenderer(new SimpleRenderer(new SimpleFillSymbol(Color.GREEN)));
             shpLayer.setOpacity(0.1f);
@@ -100,36 +113,37 @@ public class GpkgViewerActivity extends ActionBarActivity implements MapActivity
             Log.e(TAG, null, e);
         }
 
-//        File file = copyAssetToTemp("newgpkg.gpkg", getAssets());
-//        if (null == file) {
-//            exampleLayer = null;
-//        } else {
-//            exampleLayer = createGroupLayerFromGeopackage(file);
-//            exampleLayer.setName("newgpkg");
-//        }
+        map.setOnStatusChangedListener(new OnStatusChangedListener() {
+            @Override
+            public void onStatusChanged(Object o, STATUS status) {
+                if (STATUS.INITIALIZED.equals(status)) {
+                    ((TextView) findViewById(R.id.textView_spatialReference)).setText("Spatial reference: " + map.getSpatialReference().getText());
+                }
+            }
+        });
+    }
 
-//        file = copyAssetToTemp("GeopackageTest.gpkg", getAssets());
-//        if (null == file) {
-//            geopackageTestLayer = null;
-//        } else {
-//            geopackageTestLayer = createGroupLayerFromGeopackage(file);
-//            geopackageTestLayer.setName("GeopackageTest");
-//        }
+    @Override
+    protected void onDestroy() {
+        if (null != shpTable) {
+            shpTable.dispose();
+        }
 
-//        basemapLayer = new ArcGISTiledMapServiceLayer("http://services.arcgisonline.com/arcgis/rest/services/World_Topo_Map/MapServer");
+        Iterator<RasterSource> rsIter = rasterSources.iterator();
+        while (rsIter.hasNext()) {
+            rsIter.next().dispose();
+        }
+        rasterSources.clear();
 
-//        final MapView map = getMapView();
-//        map.setOnStatusChangedListener(new OnStatusChangedListener() {
-//            @Override
-//            public void onStatusChanged(Object o, STATUS status) {
-//                if (STATUS.INITIALIZED.equals(status)) {
-//                    ((TextView) findViewById(R.id.textView_spatialReference)).setText("Spatial reference: " + map.getSpatialReference().getText());
-//                }
-//            }
-//        });
-////        map.addLayer(geopackageTestLayer);
-//        map.addLayer(exampleLayer);
-////        map.addLayer(basemapLayer);
+        Iterator<Geopackage> gpkgIter = geopackages.iterator();
+        while (gpkgIter.hasNext()) {
+            gpkgIter.next().dispose();
+        }
+        geopackages.clear();
+
+        getMapView().removeAll();
+
+        super.onDestroy();
     }
 
     @Override
@@ -153,7 +167,7 @@ public class GpkgViewerActivity extends ActionBarActivity implements MapActivity
 
             case R.id.action_addRasterGpkg:
             case R.id.action_addVectorGpkg:
-                Intent intent = Intent.createChooser(FileUtils.createGetContentIntent(), "Select a Geopackage (.gpkg)");
+                Intent intent = Intent.createChooser(FileUtils.createGetContentIntent(), "Select a Geopackage");
                 startActivityForResult(intent, R.id.action_addRasterGpkg == id ? REQUEST_CODE_RASTER : REQUEST_CODE_VECTOR);
                 return true;
 
@@ -181,76 +195,70 @@ public class GpkgViewerActivity extends ActionBarActivity implements MapActivity
     }
 
     private void addRasterGpkg(String path) {
-
+        try {
+            MapView map = getMapView();
+            FileRasterSource src = new FileRasterSource(path);
+            rasterSources.add(src);
+            src.project(map.getSpatialReference());
+            RasterLayer layer = new RasterLayer(src);
+            layer.setRenderer(RGB_RENDERER);
+            layer.setName((path.contains("/") ? path.substring(path.lastIndexOf("/") + 1) : path) + " (raster)");
+            map.addLayer(layer);
+        } catch (FileNotFoundException e) {
+            Log.d(TAG, null, e);
+        }
     }
 
     private void addVectorGpkg(String path) {
-
+        try {
+            Geopackage gpkg = new Geopackage(path);
+            geopackages.add(gpkg);
+            GroupLayer groupLayer = createGroupLayerFromGeopackageFeatureClasses(gpkg);
+            MapView map = getMapView();
+            for (Layer layer : groupLayer.getLayers()) {
+                map.addLayer(layer);
+            }
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
     }
 
     public MapView getMapView() {
         return (MapView) findViewById(R.id.map);
     }
 
-    private static GroupLayer createGroupLayerFromGeopackage(File gpkgFile) {
-        GroupLayer groupLayer = null;
-        try {
-            Geopackage gpkg = new Geopackage(gpkgFile.getAbsolutePath());
-            groupLayer = new GroupLayer(false);
-            List<GeopackageFeatureTable> tables = gpkg.getGeopackageFeatureTables();
+    private static GroupLayer createGroupLayerFromGeopackageFeatureClasses(Geopackage gpkg) {
+        GroupLayer groupLayer = new GroupLayer(false);
+        List<GeopackageFeatureTable> tables = gpkg.getGeopackageFeatureTables();
 
-            //First pass: polygons and unknowns
-            HashSet<Geometry.Type> types = new HashSet<>();
-            types.add(Geometry.Type.ENVELOPE);
-            types.add(Geometry.Type.POLYGON);
-            types.add(Geometry.Type.UNKNOWN);
-            addTables(groupLayer, tables, types);
+        //First pass: polygons and unknowns
+        HashSet<Geometry.Type> types = new HashSet<>();
+        types.add(Geometry.Type.ENVELOPE);
+        types.add(Geometry.Type.POLYGON);
+        types.add(Geometry.Type.UNKNOWN);
+        addTables(groupLayer, tables, types, FILL_RENDERER);
 
-            //Second pass: lines
-            types.clear();
-            types.add(Geometry.Type.LINE);
-            types.add(Geometry.Type.POLYLINE);
-            addTables(groupLayer, tables, types);
+        //Second pass: lines
+        types.clear();
+        types.add(Geometry.Type.LINE);
+        types.add(Geometry.Type.POLYLINE);
+        addTables(groupLayer, tables, types, LINE_RENDERER);
 
-            //Third pass: points
-            types.clear();
-            types.add(Geometry.Type.MULTIPOINT);
-            types.add(Geometry.Type.POINT);
-            addTables(groupLayer, tables, types);
-        } catch (FileNotFoundException e) {
-            Log.d(TAG, null, e);
-        } finally {
-            return groupLayer;
-        }
+        //Third pass: points
+        types.clear();
+        types.add(Geometry.Type.MULTIPOINT);
+        types.add(Geometry.Type.POINT);
+        addTables(groupLayer, tables, types, POINT_RENDERER);
+
+        return groupLayer;
     }
 
-    private static void addTables(GroupLayer groupLayer, List<GeopackageFeatureTable> tables, Set<Geometry.Type> types) {
+    private static void addTables(GroupLayer groupLayer, List<GeopackageFeatureTable> tables, Set<Geometry.Type> types, Renderer renderer) {
         for (GeopackageFeatureTable table : tables) {
             if (types.contains(table.getGeometryType())) {
-                String srString = table.getSpatialReference().getText();
-                QueryParameters params = new QueryParameters();
-                params.setWhere("0 = 0");
-                params.setOutFields(new String[]{"*"});
-                table.queryFeatures(new QueryParameters(), new CallbackListener<FeatureResult>() {
-                    @Override
-                    public void onCallback(FeatureResult objects) {
-                        long count = objects.featureCount();
-                    }
-
-                    @Override
-                    public void onError(Throwable throwable) {
-                        Log.e(TAG, null, throwable);
-                    }
-                });
                 final FeatureLayer layer = new FeatureLayer(table);
-                layer.setOnStatusChangedListener(new OnStatusChangedListener() {
-                    @Override
-                    public void onStatusChanged(Object o, STATUS status) {
-                        if (STATUS.INITIALIZED.equals(status)) {
-                            Log.d(TAG, "Initialized: " + layer);
-                        }
-                    }
-                });
+                layer.setRenderer(renderer);
+                layer.setName(table.getTableName());
                 groupLayer.addLayer(layer);
             }
         }

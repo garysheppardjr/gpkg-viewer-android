@@ -32,6 +32,9 @@ import com.esri.core.geometry.GeometryEngine;
 import com.esri.core.geometry.Polygon;
 import com.esri.defense.dse.gpkgviewer.R;
 
+/**
+ * A dialog that allows the user to turn layer visibility on and off and also zoom to layers.
+ */
 public class LayersDialogFragment extends DialogFragment {
 
     private static final String TAG = LayersDialogFragment.class.getSimpleName();
