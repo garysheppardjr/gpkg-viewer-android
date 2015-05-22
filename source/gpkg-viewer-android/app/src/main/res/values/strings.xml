@@ -6,5 +6,8 @@
     <string name="layers_dialog_title">Layers</string>
     <string name="zoom_to">Zoom To</string>
     <string name="spatial_reference_not_set">Spatial reference undefined</string>
-    <string name="shapefile_name">continent</string>
+    <string name="default_shapefile_name">continent</string>
+    <string name="choose_sr">Choose a Spatial Reference</string>
+    <string name="wgs_1984_label">WGS 1984</string>
+    <string name="web_mercator_label">Web Mercator</string>
 </resources>

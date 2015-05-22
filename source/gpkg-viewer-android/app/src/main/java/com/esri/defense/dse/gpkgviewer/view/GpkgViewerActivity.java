@@ -62,6 +62,8 @@ import java.util.Set;
  */
 public class GpkgViewerActivity extends ActionBarActivity implements MapActivity {
 
+    public static final String SHAPEFILE_NAME_EXTRA = "shapefile name";
+
     private static final String TAG = GpkgViewerActivity.class.getSimpleName();
     private static final int[] LAYER_COLORS = new int[] {
             Color.rgb(255, 0, 0),
@@ -95,7 +97,13 @@ public class GpkgViewerActivity extends ActionBarActivity implements MapActivity
         AssetManager assets = getAssets();
         try {
             String[] strs = assets.list("");
-            String shapefileName = getString(R.string.shapefile_name);
+            String shapefileName = null;
+            if (null != getIntent()) {
+                shapefileName = getIntent().getStringExtra(SHAPEFILE_NAME_EXTRA);
+            }
+            if (null == shapefileName) {
+                shapefileName = getString(R.string.default_shapefile_name);
+            }
             for (String str : strs) {
                 if (str.startsWith(shapefileName)) {
                     Utilities.copyAsset(getAssets(), str, getFilesDir(), false);
