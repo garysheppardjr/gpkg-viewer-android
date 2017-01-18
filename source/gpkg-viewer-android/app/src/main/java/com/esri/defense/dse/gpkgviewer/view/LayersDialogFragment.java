@@ -28,8 +28,6 @@ import android.widget.CompoundButton;
 import android.widget.ListView;
 
 import com.esri.android.map.Layer;
-import com.esri.core.geometry.GeometryEngine;
-import com.esri.core.geometry.Polygon;
 import com.esri.defense.dse.gpkgviewer.R;
 
 /**
@@ -86,9 +84,6 @@ public class LayersDialogFragment extends DialogFragment {
                     zoomToButton.setOnClickListener(new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
-                            Polygon extent = getLayer(position).getExtent();
-                            String json = GeometryEngine.geometryToJson(mapActivity.getMapView().getSpatialReference(), extent);
-
                             mapActivity.getMapView().setExtent(getLayer(position).getFullExtent());
                         }
                     });
